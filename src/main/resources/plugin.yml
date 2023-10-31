@@ -1,0 +1,9 @@
+name: Regeneration
+version: '${project.version}'
+main: mc.craig.software.regeneration.Regeneration
+api-version: '1.20'
+load: STARTUP
+commands:
+  regen:
+    description: Set the number of regenerations
+    usage: /regen set-regens <AMOUNTHERE>
