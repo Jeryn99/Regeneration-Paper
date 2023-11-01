@@ -7,3 +7,8 @@ commands:
   regen:
     description: Set the number of regenerations
     usage: /regen set-regens <AMOUNTHERE>
+permissions:
+  regeneration.can_regenerate:
+    description: Allows the player to regenerate
+  regeneration.set_regens:
+    description: Allows the player to manipulate their regeneration amount via commands

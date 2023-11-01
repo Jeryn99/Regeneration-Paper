@@ -1,17 +1,13 @@
 package mc.craig.software.regeneration;
 
-import com.destroystokyo.paper.event.entity.EndermanAttackPlayerEvent;
 import com.destroystokyo.paper.profile.PlayerProfile;
-import com.destroystokyo.paper.profile.ProfileProperty;
 import mc.craig.software.regeneration.commands.RegenAmountCommand;
 import mc.craig.software.regeneration.items.ItemUtil;
+import mc.craig.software.regeneration.permissions.Permissions;
 import mc.craig.software.regeneration.skin.APIManager;
+import mc.craig.software.regeneration.skin.PlayerSkinStorage;
 import mc.craig.software.regeneration.skin.SkinManager;
-import net.kyori.adventure.text.Component;
-import org.bukkit.Material;
-import org.bukkit.Particle;
-import org.bukkit.Server;
-import org.bukkit.World;
+import org.bukkit.*;
 import org.bukkit.entity.Entity;
 import org.bukkit.entity.LivingEntity;
 import org.bukkit.entity.Player;
@@ -36,15 +32,15 @@ import org.jetbrains.annotations.NotNull;
 import java.net.MalformedURLException;
 import java.net.URL;
 import java.util.Collection;
-import java.util.Set;
 
 public class Regeneration extends JavaPlugin implements Listener {
 
 
     private static Regeneration INSTANCE;
 
-    public static final SkinManager skinManager = new SkinManager();
+    public static final SkinManager SKIN_MANAGER = new SkinManager();
     public static APIManager API_MANAGER;
+    public static PlayerSkinStorage PLAYER_SKIN_STORAGE = new PlayerSkinStorage("regen_skins.json");
 
 
     public static Plugin getInstance() {
@@ -53,20 +49,19 @@ public class Regeneration extends JavaPlugin implements Listener {
 
     @Override
     public void onEnable() {
-        getLogger().info("HELLO");
         INSTANCE = this;
-        API_MANAGER = new APIManager(INSTANCE, "https://mc.craig.software/api/skin/random-skins", skinManager);
+        API_MANAGER = new APIManager(INSTANCE, "https://mc.craig.software/api/skin/random-skins", SKIN_MANAGER);
         API_MANAGER.fetchAndPopulateSkinsAsync();
         getServer().getPluginManager().registerEvents(this, this);
         this.getCommand("regen").setExecutor(new RegenAmountCommand(this));
-
-
         registerCustomRecipe();
 
     }
 
     private void registerCustomRecipe() {
-        ShapedRecipe customRecipe = new ShapedRecipe(ItemUtil.createFobWatch());
+        NamespacedKey key = new NamespacedKey(this, "fob_watch");
+
+        ShapedRecipe customRecipe = new ShapedRecipe(key, ItemUtil.createFobWatch());
         customRecipe.shape("QIG", "SES", "IGI");
         customRecipe.setIngredient('G', Material.GHAST_TEAR);
         customRecipe.setIngredient('I', Material.IRON_INGOT);
@@ -91,7 +86,7 @@ public class Regeneration extends JavaPlugin implements Listener {
         if(event.getEntity() instanceof Player){
             Player player = (Player) event.getEntity();
             if(RegenerationManager.isRegenerating(player)){
-                event.setCancelled(true);
+                event.setDamage(0);
             }
         }
     }
@@ -112,11 +107,8 @@ public class Regeneration extends JavaPlugin implements Listener {
     @EventHandler
     public void onPlayerJoin(PlayerJoinEvent event) {
         Player player = event.getPlayer();
-        player.sendMessage(Component.text("Hello, " + player.getName() + "!"));
-
         // Initialize custom player data
-        player.setMetadata("isRegenerating", new FixedMetadataValue(this, false));
-        player.setMetadata("regenerationsLeft", new FixedMetadataValue(this, 12));
+        RegenerationManager.initPlayer(player);
     }
 
     @EventHandler
@@ -135,7 +127,7 @@ public class Regeneration extends JavaPlugin implements Listener {
     public void onPlayerDeath(PlayerDeathEvent event) {
         final Player player = event.getEntity();
 
-        if(!player.hasPermission("regeneration.can_regeneration")) return;
+        if (!player.hasPermission(Permissions.CAN_REGENERATE)) return;
 
         // Cancel the death event
         event.setCancelled(true);
@@ -205,19 +197,9 @@ public class Regeneration extends JavaPlugin implements Listener {
                         world.spawnParticle(Particle.FLAME, player.getLocation().add(xOffset , 0, zOffset), 1, 0, 0, 0, 0);
                     }
 
-
-
                     if (ticksElapsed == (duration / 2)) {
-                        PlayerProfile playerProfile = player.getPlayerProfile();
-                        @NotNull PlayerTextures textures = playerProfile.getTextures();
-
-                        try {
-                            textures.setSkin(new URL(skinManager.getRandomSkin().getLink()), PlayerTextures.SkinModel.SLIM);
-                        } catch (MalformedURLException e) {
-                            throw new RuntimeException(e);
-                        }
-                        playerProfile.setTextures(textures);
-                        player.setPlayerProfile(playerProfile);
+                        String skin = SKIN_MANAGER.getRandomSkin().getLink();
+                        changePlayersSkin(player, skin);
                     }
 
                     ticksElapsed += particleInterval;
@@ -226,5 +208,21 @@ public class Regeneration extends JavaPlugin implements Listener {
                 }
             }
         }, 0L, particleInterval);
+    }
+
+    public static void changePlayersSkin(Player player, String url) {
+        PlayerProfile playerProfile = player.getPlayerProfile();
+        @NotNull PlayerTextures textures = playerProfile.getTextures();
+
+        if(url == null) return;
+
+        try {
+            textures.setSkin(new URL(url), PlayerTextures.SkinModel.SLIM);
+            PLAYER_SKIN_STORAGE.storeSkinURL(String.valueOf(player.getUniqueId()), url);
+        } catch (MalformedURLException e) {
+            getInstance().getLogger().info("Something went wrong change a players skin!");
+        }
+        playerProfile.setTextures(textures);
+        player.setPlayerProfile(playerProfile);
     }
 }

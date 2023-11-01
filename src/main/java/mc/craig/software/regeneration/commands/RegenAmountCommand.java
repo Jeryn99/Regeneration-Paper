@@ -3,6 +3,7 @@ package mc.craig.software.regeneration.commands;
 import mc.craig.software.regeneration.Regeneration;
 import mc.craig.software.regeneration.RegenerationManager;
 import mc.craig.software.regeneration.items.ItemUtil;
+import mc.craig.software.regeneration.permissions.Permissions;
 import org.bukkit.Bukkit;
 import org.bukkit.command.Command;
 import org.bukkit.command.CommandExecutor;
@@ -27,13 +28,15 @@ public class RegenAmountCommand implements CommandExecutor, TabCompleter {
     public boolean onCommand(CommandSender sender, Command command, String label, String[] args) {
         if (sender instanceof Player) {
             Player player = (Player) sender;
+
+            if(!player.hasPermission(Permissions.SET_REGENS)) return false;
+
             if (args.length >= 2 && args[0].equalsIgnoreCase("set-regens")) {
                 try {
                     int amount = Integer.parseInt(args[1]);
 
-                    Player targetPlayer = player; // Default to the command sender
+                    Player targetPlayer = player;
                     if (args.length == 3) {
-                        // If a third argument is provided, assume it's a player name
                         String playerName = args[2];
                         Player specifiedPlayer = Bukkit.getPlayer(playerName);
                         if (specifiedPlayer != null) {
@@ -46,7 +49,6 @@ public class RegenAmountCommand implements CommandExecutor, TabCompleter {
 
                     RegenerationManager.setRegenerationsLeft(targetPlayer, amount);
                     player.sendMessage("Regens set to " + amount + " for " + targetPlayer.getName());
-                    player.getInventory().addItem(ItemUtil.createFobWatch());
                 } catch (NumberFormatException e) {
                     player.sendMessage("Invalid number format for regens.");
                 }

@@ -5,6 +5,10 @@ import java.util.List;
 import java.util.Random;
 
 public class SkinManager {
+
+    public static final Random RAND = new Random();
+
+
     private List<Skin> skinList;
 
     public SkinManager() {
@@ -20,9 +24,7 @@ public class SkinManager {
         if (skinList.isEmpty()) {
             return null;
         }
-
-        Random random = new Random();
-        int randomIndex = random.nextInt(skinList.size());
+        int randomIndex = RAND.nextInt(skinList.size());
         return skinList.get(randomIndex);
     }
 
@@ -32,6 +34,24 @@ public class SkinManager {
 
     public int getSkinCount() {
         return skinList.size();
+    }
+
+    public static class Skin {
+        private String name;
+        private String link;
+
+        public Skin(String name, String link) {
+            this.name = name;
+            this.link = link;
+        }
+
+        public String getName() {
+            return name;
+        }
+
+        public String getLink() {
+            return link;
+        }
     }
 }
 

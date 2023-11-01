@@ -44,6 +44,7 @@ public class APIManager extends BukkitRunnable {
             JSONParser parser = new JSONParser();
             JSONArray skinArray = (JSONArray) parser.parse(response.toString());
 
+            skinManager.getAllSkins().clear();
             for (Object skinObj : skinArray) {
                 JSONObject skinJSON = (JSONObject) skinObj;
                 String name = (String) skinJSON.get("name");
